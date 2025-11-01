@@ -1,0 +1,81 @@
+import { ProjectStatus } from "@/types";
+import { z } from "zod";
+export const signInSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password is required"),
+});
+
+export const signUpSchema = z
+  .object({
+    email: z.string().email("Invalid email address"),
+    password: z.string().min(8, "Password must be 8 characters"),
+    name: z.string().min(2, "Name must be atleast 3 characters"),
+    confirmPassword: z.string().min(8, "Confirm Password must be 8 characters"),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Passwords do not match",
+  });
+
+export const resetPasswordSchema = z
+  .object({
+    newPassword: z.string().min(8, "Password must be 8 characters"),
+    confirmPassword: z.string().min(8, "Confirm Password must be 8 characters"),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Passwords do not match",
+  });
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().email("Invalid email address"),
+});
+
+export const workspaceschema = z.object({
+  name: z.string().min(3, "Name must be atleast 3 characters"),
+  color: z.string().min(3, "Color must be atleast 3 characters"),
+  description: z.string().optional(),
+});
+
+export const projectSchema = z.object({
+  title: z.string().min(3, "Title must be at least 3 characters"),
+  name: z.string().max(80, "Title must be at Atmost 80 characters"),
+  description: z.string().optional(),
+  status: z.string(),
+  startDate: z.string().optional(),
+  dueDate: z.string().optional(),
+  members: z
+    .array(
+      z.object({
+        user: z.string(),
+        role: z.enum(["manager", "contributor", "viewer"]),
+      })
+    )
+    .optional(),
+  assignees: z.array(z.string()).optional(), // ✅ NEW
+  clients: z.array(z.string()).optional(), // ✅ NEW
+  tags: z.string().optional(),
+});
+
+export const createTaskSchema = z.object({
+  title: z.string().min(1, "Task title is required"),
+  description: z.string().optional(),
+  status: z.enum(["To Do", "In Progress", "Review", "Done"]),
+  priority: z.enum(["Low", "Medium", "High"]),
+  dueDate: z.string().optional(),
+  // ✅ REMOVED: assignees and clients - these come from project now
+});
+export const inviteMemberSchema = z.object({
+  email: z.string().email(),
+  // role: z.enum(["admin", "member", "viewer"]),
+});
+export const eventSchema = z.object({
+  title: z
+    .string()
+    .min(1, "Event title is required")
+    .max(100, "Title too long"),
+  description: z.string().optional(),
+  dateTime: z.string().min(1, "Date and time is required"),
+});
+
+export type EventFormData = z.infer<typeof eventSchema>;

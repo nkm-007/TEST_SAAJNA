@@ -1,0 +1,84 @@
+import mongoose, { Schema } from "mongoose";
+
+const taskSchema = new Schema(
+  {
+    title: { type: String, required: true, trim: true },
+    description: { type: String, trim: true },
+    project: {
+      type: Schema.Types.ObjectId,
+      ref: "Project",
+      required: true,
+    },
+    workspace: {
+      type: Schema.Types.ObjectId,
+      ref: "Workspace",
+      required: true,
+    },
+    status: {
+      type: String,
+      enum: ["To Do", "In Progress", "Review", "Done"],
+      default: "To Do",
+    },
+    priority: {
+      type: String,
+      enum: ["Low", "Medium", "High"],
+      default: "Medium",
+    },
+    assignees: [{ type: Schema.Types.ObjectId, ref: "User" }],
+    clients: [{ type: Schema.Types.ObjectId, ref: "User" }],
+    watchers: [{ type: Schema.Types.ObjectId, ref: "User" }],
+    dueDate: { type: Date },
+    courtName: { type: String, trim: true },
+    hearings: [
+      {
+        date: { type: Date, required: true },
+        description: { type: String, trim: true },
+        inFavour: { type: Boolean, required: true }, // true = our favour
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+    completedAt: { type: Date },
+    estimatedHours: { type: Number, min: 0 },
+    actualHours: { type: Number, min: 0 },
+    tags: [{ type: String }],
+    subtasks: [
+      {
+        title: {
+          type: String,
+          required: true,
+        },
+        completed: {
+          type: Boolean,
+          default: false,
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+    comments: [{ type: Schema.Types.ObjectId, ref: "Comment" }],
+    internalComments: [{ type: Schema.Types.ObjectId, ref: "InternalComment" }],
+
+    attachments: [
+      {
+        fileName: { type: String, required: true },
+        driveFileId: { type: String, required: true },
+        driveViewLink: { type: String, required: true },
+        driveDownloadLink: { type: String },
+        fileType: { type: String },
+        fileSize: { type: Number },
+        uploadedBy: { type: Schema.Types.ObjectId, ref: "User" },
+        uploadedAt: { type: Date, default: Date.now },
+        taskId: { type: String },
+      },
+    ],
+    createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    isArchived: { type: Boolean, default: false },
+  },
+  { timestamps: true }
+);
+
+const Task = mongoose.model("Task", taskSchema);
+
+export default Task;
