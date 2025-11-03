@@ -1,18 +1,21 @@
+// frontend/app/components/task/file-upload-button-drive.tsx
+
 import React, { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import axios from "axios";
 import { Upload, Cloud } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  useUploadFileToDrive,
+  useGoogleDriveStatus,
+} from "@/hooks/use-google-drive";
+import { fetchData } from "@/lib/fetch-util"; // ✅ ADD THIS
 
 interface FileUploadButtonDriveProps {
   taskId: string;
   onUploadSuccess: () => void;
   disabled?: boolean;
 }
-
-import { useUploadFileToDrive } from "@/hooks/use-google-drive";
 
 export const FileUploadButtonDrive: React.FC<FileUploadButtonDriveProps> = ({
   taskId,
@@ -23,15 +26,7 @@ export const FileUploadButtonDrive: React.FC<FileUploadButtonDriveProps> = ({
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   const { mutate: uploadFile, isPending: uploading } = useUploadFileToDrive();
-
-  const checkDriveConnection = async () => {
-    try {
-      const response = await axios.get("/api/auth/google/status");
-      return response.data.isConnected;
-    } catch (error) {
-      return false;
-    }
-  };
+  const { data: driveStatus } = useGoogleDriveStatus();
 
   const handleFileChange = async (
     event: React.ChangeEvent<HTMLInputElement>
@@ -39,16 +34,18 @@ export const FileUploadButtonDrive: React.FC<FileUploadButtonDriveProps> = ({
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Check file size (50MB limit)
     if (file.size > 50 * 1024 * 1024) {
       toast.error("File size exceeds 50MB limit");
       if (inputRef.current) inputRef.current.value = "";
       return;
     }
 
-    const isConnected = await checkDriveConnection();
+    // ✅ Check if Drive is connected (from cached query data)
+    const isConnected = driveStatus?.isConnected || false;
     if (!isConnected) {
       setNeedsAuth(true);
-      toast.error("Please connect Google Drive first");
+      toast.error("Please connect Google Drive first from the header");
       if (inputRef.current) inputRef.current.value = "";
       return;
     }
@@ -62,11 +59,22 @@ export const FileUploadButtonDrive: React.FC<FileUploadButtonDriveProps> = ({
           if (inputRef.current) inputRef.current.value = "";
         },
         onError: (error: any) => {
-          if (error.response?.data?.requiresAuth) {
+          console.error("Upload error:", error);
+          console.error("Error message:", error.message);
+          console.error("Error response:", error.response);
+
+          if (
+            error.message?.includes("not connected") ||
+            error.response?.data?.requiresAuth
+          ) {
             setNeedsAuth(true);
-            toast.error("Please connect Google Drive first");
+            toast.error("Please connect Google Drive first from the header");
           } else {
-            toast.error(error.response?.data?.message || "File upload failed");
+            toast.error(
+              error.message ||
+                error.response?.data?.message ||
+                "File upload failed"
+            );
           }
           if (inputRef.current) inputRef.current.value = "";
         },
@@ -74,24 +82,16 @@ export const FileUploadButtonDrive: React.FC<FileUploadButtonDriveProps> = ({
     );
   };
 
-  const handleConnectDrive = async () => {
-    try {
-      const response = await axios.get("/api/auth/google/connect");
-      window.location.href = response.data.authUrl;
-    } catch (error) {
-      toast.error("Failed to initiate Google Drive connection");
-    }
-  };
-
+  // ✅ Don't show connect button - redirect to header instead
   if (needsAuth) {
     return (
       <Alert className="mt-4">
         <Cloud className="h-4 w-4" />
-        <AlertDescription className="flex items-center justify-between">
-          <span>Connect Google Drive to upload files</span>
-          <Button size="sm" onClick={handleConnectDrive}>
-            Connect Drive
-          </Button>
+        <AlertDescription>
+          <span>
+            Please connect Google Drive using the button in the header (top
+            right)
+          </span>
         </AlertDescription>
       </Alert>
     );

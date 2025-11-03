@@ -63,14 +63,15 @@ const taskSchema = new Schema(
     attachments: [
       {
         fileName: { type: String, required: true },
-        driveFileId: { type: String, required: true },
-        driveViewLink: { type: String, required: true },
+        driveFileId: { type: String },
+        driveViewLink: { type: String },
         driveDownloadLink: { type: String },
         fileType: { type: String },
         fileSize: { type: Number },
         uploadedBy: { type: Schema.Types.ObjectId, ref: "User" },
         uploadedAt: { type: Date, default: Date.now },
         taskId: { type: String },
+        fileUrl: { type: String },
       },
     ],
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },

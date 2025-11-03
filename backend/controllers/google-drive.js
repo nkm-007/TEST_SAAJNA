@@ -77,18 +77,27 @@ export const uploadFileToDrive = async (req, res) => {
     const { taskId } = req.params;
     const file = req.file;
 
+    console.log("📤 Upload attempt:", { taskId, fileName: file?.originalname }); // ✅ ADD
+
     if (!file) {
       return res.status(400).json({ message: "No file provided" });
     }
 
     const user = await User.findById(req.user._id);
+    console.log("👤 User found:", {
+      userId: user._id,
+      hasGoogleDrive: !!user.googleDrive,
+    }); // ✅ ADD
 
     if (!user.googleDrive?.isConnected) {
+      console.log("❌ Drive not connected"); // ✅ ADD
       return res.status(403).json({
         message: "Google Drive not connected",
         requiresAuth: true,
       });
     }
+
+    console.log("✅ Drive connected, checking tokens..."); // ✅ ADD
 
     const task = await Task.findById(taskId);
     if (!task) {
@@ -109,9 +118,13 @@ export const uploadFileToDrive = async (req, res) => {
       return res.status(403).json({ message: "Not authorized" });
     }
 
+    console.log("🔑 Refreshing access token..."); // ✅ ADD
     const accessToken = await refreshTokenIfNeeded(user, User);
+    console.log("✅ Access token refreshed"); // ✅ ADD
+
     const drive = getDriveInstance(accessToken, user.googleDrive.refreshToken);
 
+    console.log("📁 Creating folder structure..."); // ✅ ADD
     // Create folder structure: CLS/Task-{id}/
     const clsFolderId = await getOrCreateCLSFolder(drive);
     const taskFolderId = await getOrCreateTaskFolder(
@@ -119,7 +132,9 @@ export const uploadFileToDrive = async (req, res) => {
       clsFolderId,
       taskId
     );
+    console.log("✅ Folders created:", { clsFolderId, taskFolderId }); // ✅ ADD
 
+    console.log("📤 Uploading file to Drive..."); // ✅ ADD
     // Upload file
     const fileMetadata = {
       name: file.originalname,
@@ -136,6 +151,7 @@ export const uploadFileToDrive = async (req, res) => {
       media: media,
       fields: "id, name, mimeType, size",
     });
+    console.log("✅ File uploaded to Drive:", driveFile.data.id); // ✅ ADD
 
     // Make file viewable by anyone with link
     await drive.permissions.create({
@@ -145,6 +161,7 @@ export const uploadFileToDrive = async (req, res) => {
         type: "anyone",
       },
     });
+    console.log("✅ Permissions set"); // ✅ ADD
 
     // Get shareable links
     const fileDetails = await drive.files.get({
@@ -167,11 +184,14 @@ export const uploadFileToDrive = async (req, res) => {
 
     task.attachments.push(attachment);
     await task.save();
+    console.log("✅ File saved to database"); // ✅ ADD
 
     // Record activity
     await recordActivity(req.user._id, "added_attachment", "Task", taskId, {
       description: `uploaded file ${driveFile.data.name}`,
     });
+
+    console.log("✅✅✅ Upload complete!"); // ✅ ADD
 
     res.json({
       success: true,
@@ -179,7 +199,8 @@ export const uploadFileToDrive = async (req, res) => {
       file: attachment,
     });
   } catch (error) {
-    console.error("Drive upload error:", error);
+    console.error("❌ Drive upload error:", error); // ✅ IMPROVED
+    console.error("❌ Error stack:", error.stack); // ✅ ADD
     res.status(500).json({
       message: "Failed to upload file",
       error: process.env.NODE_ENV === "development" ? error.message : undefined,

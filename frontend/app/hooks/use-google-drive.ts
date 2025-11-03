@@ -53,7 +53,7 @@ export const useUploadFileToDrive = () => {
       const formData = new FormData();
       formData.append("file", data.file);
 
-      // ✅ Use fetch API instead of axios for FormData
+      // ✅ Use fetch API with proper error handling
       const token = localStorage.getItem("token");
 
       const response = await fetch(
@@ -62,15 +62,23 @@ export const useUploadFileToDrive = () => {
           method: "POST",
           headers: {
             Authorization: token ? `Bearer ${token}` : "",
-            // Don't set Content-Type for FormData - browser will set it with boundary
+            // ✅ Don't set Content-Type - browser sets it automatically with boundary
           },
           body: formData,
         }
       );
 
+      // ✅ Better error handling
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Upload failed");
+        let errorMessage = "Upload failed";
+        try {
+          const error = await response.json();
+          errorMessage = error.message || errorMessage;
+        } catch (e) {
+          // If response isn't JSON, use status text
+          errorMessage = `Upload failed: ${response.status} ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
 
       return response.json();
